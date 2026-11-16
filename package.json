@@ -1,0 +1,40 @@
+{
+  "name": "kinling",
+  "version": "0.1.0",
+  "description": "Kinling — a living fantasy companion in a small sanctuary.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:browser": "node scripts/browser-check.mjs",
+    "shot": "node scripts/shot.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jobendik/kinling.git"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jobendik/kinling/issues"
+  },
+  "homepage": "https://github.com/jobendik/kinling#readme",
+  "dependencies": {
+    "@fontsource-variable/figtree": "^5.3.0",
+    "@fontsource-variable/fraunces": "^5.3.0",
+    "three": "^0.187.0",
+    "yuka": "^0.7.8"
+  },
+  "devDependencies": {
+    "@types/three": "^0.187.0",
+    "@types/yuka": "^0.7.4",
+    "playwright-core": "^1.65.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.0"
+  },
+  "private": true,
+  "type": "module"
+}
