@@ -47,7 +47,7 @@ const TOY_SPEC: Record<ToyKind, { radius: number; restitution: number; friction:
 
 export class Toy extends MovingEntity {
   readonly radius: number;
-  state: 'free' | 'carried' = 'free';
+  state: 'free' | 'carried' | 'held' = 'free';
   resting = true;
   inWater = false;
   /** Sim time of the last player throw or nudge; drives chase interest. */
@@ -79,7 +79,7 @@ export class Toy extends MovingEntity {
   }
 
   override update(dt: number): this {
-    if (this.state === 'carried') return this;
+    if (this.state !== 'free') return this;
     if (this.resting) return this;
     const spec = TOY_SPEC[this.kind];
     const p = this.position, v = this.velocity;

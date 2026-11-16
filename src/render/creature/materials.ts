@@ -198,7 +198,7 @@ vec3 kEye;`,
 export function createLanternMaterial(color: THREE.Color): { material: THREE.MeshPhysicalMaterial; uniforms: { uGlow: { value: number }; uLantern: { value: THREE.Color } } } {
   const uniforms = { uGlow: { value: 1 }, uLantern: { value: color.clone() } };
   const material = new THREE.MeshPhysicalMaterial({
-    color: color.clone().multiplyScalar(0.35),
+    color: color.clone().multiplyScalar(0.6),
     roughness: 0.3,
     clearcoat: 0.6,
     clearcoatRoughness: 0.25,
@@ -217,7 +217,7 @@ export function createLanternMaterial(color: THREE.Color): { material: THREE.Mes
   float facing = abs(normalize(vNormal).z);
   // hot core seen through a cooler shell, with faint veins like a seed pod
   float veins = 0.85 + 0.15 * sin(atan(vBud.x, vBud.z) * 9.0 + vBud.y * 40.0);
-  float core = mix(0.35, 1.7, pow(facing, 1.6)) * veins;
+  float core = mix(0.5, 2.2, pow(facing, 1.4)) * veins;
   totalEmissiveRadiance += uLantern * core * uGlow;
 }`,
       );

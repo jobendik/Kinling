@@ -22,10 +22,10 @@ export interface Coat {
 }
 
 const COATS: Array<Record<keyof Coat, number>> = [
-  { back: 0xb4673a, dark: 0x54291a, belly: 0xf4e4c6, earInner: 0xe79a84, lantern: 0xffb24a, nose: 0x2a1512 }, // ember
-  { back: 0x5c6f92, dark: 0x283250, belly: 0xe9e3ee, earInner: 0xd69ab4, lantern: 0xffc87a, nose: 0x161a26 }, // dusk
-  { back: 0x7c8a4e, dark: 0x384426, belly: 0xf1ebcf, earInner: 0xe2ab86, lantern: 0xdcff78, nose: 0x1c1f12 }, // moss
-  { back: 0x8b5e88, dark: 0x432c48, belly: 0xf3e3e7, earInner: 0xf09e9e, lantern: 0xff9ccd, nose: 0x231424 }, // heather
+  { back: 0xc87a42, dark: 0x6a3520, belly: 0xf7e8cc, earInner: 0xeda28c, lantern: 0xffb24a, nose: 0x2a1512 }, // ember
+  { back: 0x7187ae, dark: 0x384468, belly: 0xeee8f2, earInner: 0xdca4bc, lantern: 0xffc87a, nose: 0x161a26 }, // dusk
+  { back: 0x96a45e, dark: 0x4a5830, belly: 0xf4eed2, earInner: 0xe6b28e, lantern: 0xdcff78, nose: 0x1c1f12 }, // moss
+  { back: 0xa878a6, dark: 0x5a3c62, belly: 0xf6e8ec, earInner: 0xf2a6a6, lantern: 0xff9ccd, nose: 0x231424 }, // heather
 ];
 const EYE_COLORS = [0xd9892a, 0x8fae3c, 0x3aa39a, 0x8a6fd0, 0xc9742f, 0x4f97c9];
 
@@ -160,7 +160,7 @@ export function buildKinling(look: Look, opts: { cell?: number; shells?: number 
     // tail darkens toward the lantern
     const tailT = smoothstep(-0.3, -0.72, z);
     out.lerp(coat.dark, tailT * 0.7);
-    furLen = lerp(furLen, 1, smoothstep(-0.25, -0.4, z));
+    furLen = lerp(furLen, 1.5, smoothstep(-0.27, -0.5, z));
     // countershading: cream underside, bib and inner legs
     const under = smoothstep(0.15, -0.55, ny) * smoothstep(-0.3, -0.2, z) * smoothstep(0.1, 0.16, y);
     const bib = 1 - smoothstep(0.07, 0.13, Math.hypot(x * 1.1, y - 0.255, (z - 0.215) * 1.15));
@@ -196,7 +196,7 @@ export function buildKinling(look: Look, opts: { cell?: number; shells?: number 
     furLen = lerp(furLen, 0.55, smoothstep(0.2, 0.12, y) * smoothstep(0.03, 0.1, y));
     furLen = Math.max(furLen, bib * 1.0, cheek * 1.1);
     void nx; void nz;
-    return { fur: clamp01(furLen), glow: g };
+    return { fur: Math.min(1.6, Math.max(0, furLen)), glow: g };
   };
   for (let v = 0; v < vcount; v++) {
     const i = v * 3;
@@ -415,10 +415,11 @@ export function buildKinling(look: Look, opts: { cell?: number; shells?: number 
   const lastTail = bones[`tail${TAIL_BONES}`];
   const lm = createLanternMaterial(coat.lantern);
   const profile: THREE.Vector2[] = [];
-  for (let i = 0; i <= 18; i++) {
-    const t = i / 18;
-    const r = Math.sin(Math.PI * Math.pow(t, 0.62)) * 0.047 * (1 - 0.25 * t);
-    profile.push(new THREE.Vector2(Math.max(r, 0.0005), (t - 0.42) * 0.125));
+  for (let i = 0; i <= 22; i++) {
+    const t = i / 22;
+    // a plump seed: round at the base, drawn to a soft point
+    const r = Math.pow(Math.sin(Math.PI * Math.pow(t, 0.8)), 0.85) * 0.05 * (1 - 0.3 * t * t);
+    profile.push(new THREE.Vector2(Math.max(r, 0.0005), (t - 0.4) * 0.118));
   }
   const bud = new THREE.Mesh(new THREE.LatheGeometry(profile, 24), lm.material);
   bud.rotation.x = -Math.PI / 2 + 0.15; // the bud's axis follows the tail

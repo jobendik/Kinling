@@ -111,7 +111,7 @@ export function buildAnatomy(look: Look): Anatomy {
     bone(name, prev, p);
     const q = add(p, seg);
     const t0 = i / TAIL_BONES, t1 = (i + 1) / TAIL_BONES;
-    const rad = (t: number): number => 0.05 - 0.02 * t + 0.014 * Math.max(0, t - 0.7) / 0.3;
+    const rad = (t: number): number => 0.048 - 0.021 * Math.sin(Math.min(1, t * 1.25) * Math.PI * 0.5) + 0.02 * Math.max(0, t - 0.62) / 0.38;
     if (i < TAIL_BONES - 1) parts.push({ prim: { type: 'cone', a: p, b: q, r1: rad(t0), r2: rad(t1) }, bone: name, k: 0.006 });
     prev = name;
     p = q;

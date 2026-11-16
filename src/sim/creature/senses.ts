@@ -35,7 +35,7 @@ export class Senses {
   private sensables(): GameEntity[] {
     const w = this.k.world;
     const list: GameEntity[] = [];
-    for (const t of Object.values(w.toys)) if (t.state === 'free') list.push(t);
+    for (const t of Object.values(w.toys)) if (t.state !== 'carried') list.push(t);
     for (const b of w.berries) if (!b.eaten) list.push(b);
     if (w.curio) list.push(w.curio);
     if (w.wisp.on) list.push(w.wisp);

@@ -211,6 +211,28 @@ export class World {
     return true;
   }
 
+  /** The player picks a free toy up and carries it with the pointer. */
+  holdToy(kind: ToyKind, x: number, y: number, z: number): boolean {
+    const toy = this.toys[kind];
+    if (toy.state === 'carried') return false;
+    toy.state = 'held';
+    toy.resting = true;
+    toy.velocity.set(0, 0, 0);
+    toy.position.set(x, Math.max(y, heightAt(x, z) + toy.radius), z);
+    toy.movedAt = this.time;
+    this.touched();
+    return true;
+  }
+
+  releaseToy(kind: ToyKind, vx: number, vy: number, vz: number): void {
+    const toy = this.toys[kind];
+    if (toy.state !== 'held') return;
+    toy.state = 'free';
+    const s = Math.hypot(vx, vy, vz);
+    const k = s > 7 ? 7 / s : 1;
+    toy.impulse(vx * k, vy * k, vz * k, true);
+  }
+
   dropBerry(x: number, z: number): boolean {
     if (this.berries.filter((b) => b.fromPlayer).length >= MAX_PLAYER_BERRIES) return false;
     const p = isWalkable(x, z, 0.05) ? { x, z } : nearestWalkable(x, z, 0.05);
