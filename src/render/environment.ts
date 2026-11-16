@@ -398,7 +398,7 @@ vH = uv.y;`,
   }
 
   private barkTube(radiusTop: number, radiusBottom: number, height: number, seed: number, open = false): THREE.BufferGeometry {
-    const geo = new THREE.CylinderGeometry(radiusTop, radiusBottom, height, 18, 16, open);
+    const geo = new THREE.CylinderGeometry(radiusTop, radiusBottom, height, 28, 16, open);
     const pos = geo.getAttribute('position');
     const col = new Float32Array(pos.count * 3);
     const a = new THREE.Color(0x4a3626), b = new THREE.Color(0x2c2018), c = new THREE.Color();
@@ -486,7 +486,7 @@ vH = uv.y;`,
       for (let i = 0; i < tp.count; i++) {
         const hy = tp.getY(i) + 4.8; // height above the base
         const ang = Math.atan2(tp.getX(i), tp.getZ(i));
-        const flare = 1 + 0.75 * Math.exp(-hy / 0.75) * (0.75 + 0.35 * Math.sin(ang * 5 + 1.3));
+        const flare = 1 + 0.7 * Math.exp(-hy / 0.8) * (0.85 + 0.15 * Math.sin(ang * 5 + 1.3));
         tp.setX(i, tp.getX(i) * flare); tp.setZ(i, tp.getZ(i) * flare);
       }
       trunkGeo.computeVertexNormals();
@@ -699,7 +699,7 @@ vH = uv.y;`,
           vAlpha = fire + dust;
           vec4 mv = modelViewMatrix * vec4(p, 1.0);
           gl_Position = projectionMatrix * mv;
-          gl_PointSize = uPixel * mix(7.0, 22.0, vFire) / max(-mv.z, 0.5);
+          gl_PointSize = min(uPixel * mix(7.0, 22.0, vFire) / max(-mv.z, 0.5), 46.0 * uPixel / 3.2);
         }`,
       fragmentShader: /* glsl */ `
         varying float vAlpha;
@@ -739,7 +739,7 @@ vH = uv.y;`,
     w.uDeep.value.setHex(0x163c44).multiplyScalar(lerp(1, 0.45, opts.night));
     this.moteUniforms.uTime.value = t;
     this.moteUniforms.uNight.value = opts.night;
-    this.moteUniforms.uPixel.value = opts.pixelRatio * 40;
+    this.moteUniforms.uPixel.value = opts.pixelRatio * 3.2;
     // mushrooms and berries hold a little light after dark
     for (const m of this.glowMats) m.emissiveIntensity = m.color.getHex() === 0xb8304a ? 0.35 + 0.9 * opts.night : 1.1 * opts.night;
   }

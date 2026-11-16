@@ -15,6 +15,16 @@ export interface FurUniforms {
   uGlowColor: { value: THREE.Color };
 }
 
+/**
+ * The scene renders to a float buffer and is then bloomed, so a single
+ * non-finite or negative pixel would smear across the whole frame. Every
+ * creature material ends with this guard (comparisons with NaN are false).
+ */
+const GUARD = /* glsl */ `#include <opaque_fragment>
+if (!(gl_FragColor.r >= 0.0 && gl_FragColor.g >= 0.0 && gl_FragColor.b >= 0.0)) gl_FragColor.rgb = diffuseColor.rgb * 0.25;
+gl_FragColor.rgb = min(gl_FragColor.rgb, vec3(14.0));`;
+const guard = (fragment: string): string => fragment.replace('#include <opaque_fragment>', GUARD);
+
 const HASH = /* glsl */ `
 float kHash(vec3 p) {
   p = fract(p * 0.1031);
@@ -40,6 +50,7 @@ export function createSkinMaterial(coat: Coat): { material: THREE.MeshPhysicalMa
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', '#include <common>\nuniform float uGlow;\nuniform vec3 uGlowColor;\nvarying float vGlow;')
       .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += uGlowColor * vGlow * uGlow;');
+    shader.fragmentShader = guard(shader.fragmentShader);
   };
   material.customProgramCacheKey = () => 'kinling-skin';
   return { material, uniforms };
@@ -123,11 +134,12 @@ ${HASH}`,
   float rad = 0.6 * (1.0 - hh * 0.72);
   if (length(f - jit) > rad) discard;
   // roots sit in shadow, tips catch the light
-  diffuseColor.rgb *= mix(0.46, 1.1, pow(uShell, 0.8));
+  diffuseColor.rgb *= mix(0.6, 1.08, pow(uShell, 0.8));
   diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 1.12 + 0.02, rnd * uShell * 0.6);
 }`,
         )
         .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += uGlowColor * vGlow * uGlow * (0.4 + 0.6 * uShell);');
+      shader.fragmentShader = guard(shader.fragmentShader);
     };
     material.customProgramCacheKey = () => 'kinling-fur';
     return material;
@@ -168,7 +180,8 @@ vec3 kEye;`,
   vec3 d = normalize(vEyeLocal);
   float ang = acos(clamp(d.z, -1.0, 1.0));
   float r = ang / 0.92;
-  float th = atan(d.y, d.x);
+  // atan(0, 0) is undefined at the exact centre of the pupil; one NaN pixel would spread through the bloom
+  float th = atan(d.y, abs(d.x) < 1e-5 ? 1e-5 : d.x);
   float fib = 0.5 + 0.5 * sin(th * 38.0 + sin(th * 9.0) * 2.0);
   vec3 iris = uIris * mix(0.5, 1.3, smoothstep(0.15, 0.95, r));
   iris = mix(iris, iris * 1.45 + 0.04, fib * 0.3 * smoothstep(uPupil, 1.0, r));
@@ -190,6 +203,7 @@ vec3 kEye;`,
   totalEmissiveRadiance += kEye * 0.22;
 }`,
       );
+    shader.fragmentShader = guard(shader.fragmentShader);
   };
   material.customProgramCacheKey = () => 'kinling-eye';
   return { material, uniforms };
@@ -216,11 +230,12 @@ export function createLanternMaterial(color: THREE.Color): { material: THREE.Mes
 {
   float facing = abs(normalize(vNormal).z);
   // hot core seen through a cooler shell, with faint veins like a seed pod
-  float veins = 0.85 + 0.15 * sin(atan(vBud.x, vBud.z) * 9.0 + vBud.y * 40.0);
+  float veins = 0.85 + 0.15 * sin(atan(vBud.x, abs(vBud.z) < 1e-5 ? 1e-5 : vBud.z) * 9.0 + vBud.y * 40.0);
   float core = mix(0.5, 2.2, pow(facing, 1.4)) * veins;
   totalEmissiveRadiance += uLantern * core * uGlow;
 }`,
       );
+    shader.fragmentShader = guard(shader.fragmentShader);
   };
   material.customProgramCacheKey = () => 'kinling-lantern';
   return { material, uniforms };

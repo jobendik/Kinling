@@ -56,8 +56,13 @@ export abstract class KEvaluator extends GoalEvaluator<Kinling> {
     this.terms = [];
     let s = b.cooldownLeft(this) > 0 ? 0 : clamp01(this.score(k));
     this.raw = s;
-    if (b.current === this && b.activity) s += HYSTERESIS;
-    else if (b.activity && b.commitLeft > 0 && !this.urgent(k, s * this.characterBias)) s *= 0.45;
+    // The running activity keeps (most of) the pull it had when it was chosen.
+    // Otherwise doing something would talk it out of finishing: every lap of
+    // water lowers thirst, every catch lowers boredom.
+    if (b.current === this && b.activity) s = Math.max(s, b.adoptedAt * 0.85) + HYSTERESIS;
+    // a running activity is protected while its commitment lasts and while the
+    // body is in the middle of an action (nobody abandons a drink between laps)
+    else if (b.activity && (b.commitLeft > 0 || k.mode === 'INTERACT') && !this.urgent(k, s * this.characterBias)) s *= 0.45;
     this.final = s * this.characterBias;
     return s;
   }
@@ -378,7 +383,7 @@ class InviteEvaluator extends KEvaluator {
 class ExploreEvaluator extends KEvaluator {
   readonly name = 'explore';
   override commit = 5;
-  override cooldownDone = 6;
+  override cooldownDone = 11;
   protected score(k: Kinling): number {
     const base = this.t('base', 0.17);
     const stim = this.t('boredom', 0.22 * k.needs.urgency('stimulation'));
@@ -394,8 +399,9 @@ class ExploreEvaluator extends KEvaluator {
 class IdleEvaluator extends KEvaluator {
   readonly name = 'idle';
   override commit = 3;
+  override cooldownDone = 3;
   protected score(k: Kinling): number {
-    return this.t('base', 0.15) + this.t('ease', 0.08 * (1 - k.affect.arousal));
+    return this.t('base', 0.2) + this.t('ease', 0.08 * (1 - k.affect.arousal));
   }
   create(k: Kinling): Activity {
     return new IdleGoal(k);
@@ -488,6 +494,8 @@ export class Brain {
   readonly evaluators: KEvaluator[] = [];
   current: KEvaluator | null = null;
   activity: Activity | null = null;
+  /** Raw desirability of the current activity at the moment it was adopted. */
+  adoptedAt = 0;
   commitLeft = 0;
   suspended = false;
   private arbTimer = 0;
@@ -582,6 +590,7 @@ export class Brain {
     this.think.clearSubgoals(); // terminates the old activity → its cleanup runs
     if (k.carrying && !e.keepsCarry) k.release(0.2);
     this.current = e;
+    this.adoptedAt = e.raw;
     this.activity = e.create(k);
     this.think.addSubgoal(this.activity);
     this.commitLeft = e.commit;

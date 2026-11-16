@@ -103,7 +103,7 @@ export class Hud {
     dock.append(el('div', { class: 'sep', role: 'separator' }));
     const call = el('button', { class: 'tool act', 'aria-label': 'Call: whistle for it to come', title: 'Whistle for it to come (C)' }, `${ICONS.call}<span>Call</span><kbd>C</kbd>`);
     call.addEventListener('click', () => { hooks.gesture(); hooks.call(); });
-    const sit = el('button', { class: 'tool act', 'aria-label': 'Sit cue: practise a cue; reward it when it sits', title: 'Give the "sit" cue — reward it with a stroke or a berry when it sits (S)' }, `${ICONS.sit}<span>Sit cue</span><kbd>S</kbd>`);
+    const sit = el('button', { class: 'tool act', 'aria-label': 'Sit cue: practise a cue; reward it when it sits', title: 'Give the "sit" cue — reward it with a stroke or a berry when it sits (S)' }, `${ICONS.sit}<span>Sit</span><kbd>S</kbd>`);
     sit.addEventListener('click', () => { hooks.gesture(); hooks.cueSit(); });
     dock.append(call, sit);
     root.append(dock);

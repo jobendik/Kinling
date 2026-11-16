@@ -102,7 +102,8 @@ export class World {
 
   /** Seconds this Kinling has lived (simulated, including credited absence). */
   time = 0;
-  dayTime = 0.6;
+  /** A new kinling arrives in late morning; dusk comes about seven minutes in. */
+  dayTime = 0.44;
   /** Where the creature believes the player is: a spot on the ground near the camera. */
   playerSpot: Vec2 = { x: DEFAULT_PLAYER_SPOT.x, z: DEFAULT_PLAYER_SPOT.z };
   /** Sim time of the last deliberate player action. */
@@ -150,6 +151,14 @@ export class World {
     this.kinling.inNest = false;
     this.kinling.inShallows = false;
     this.manager.update(dt);
+    if (this.pending.length) {
+      for (let i = 0; i < this.pending.length; ) {
+        const p = this.pending[i];
+        if (p.at > this.time) { i++; continue; }
+        this.pending.splice(i, 1);
+        this.manager.sendMessage(this.source, this.kinling, p.message, 0, p.data);
+      }
+    }
     if (this.bushStock < BUSH_CAPACITY) {
       this.bushTimer += dt;
       if (this.bushTimer >= BUSH_REGROW_S) {
@@ -161,6 +170,19 @@ export class World {
     if (this.berries.some((b) => b.eaten)) this.berries = this.berries.filter((b) => !b.eaten);
   }
 
+  /**
+   * Send the creature a telegram after a delay. Delivery goes through Yuka's
+   * MessageDispatcher, but the waiting is done here: in yuka 0.7.8
+   * `dispatchDelayedMessages` removes the *last* queued telegram rather than
+   * the one that came due, which duplicates or drops messages as soon as two
+   * are pending with different delays.
+   */
+  private post(message: string, delay: number, data: object): void {
+    if (delay <= 0) this.manager.sendMessage(this.source, this.kinling, message, 0, data);
+    else this.pending.push({ at: this.time + delay, message, data });
+  }
+  private pending: Array<{ at: number; message: string; data: object }> = [];
+
   // ── sound propagation ──────────────────────────────────────────
   emitSound(e: SoundEvent): void {
     this.events.emit('sound', e);
@@ -169,7 +191,7 @@ export class World {
     const reach = 3 + e.loud * 14;
     if (d > reach) return;
     // a short, distance-dependent latency before the creature reacts
-    this.manager.sendMessage(this.source, k, MSG.SOUND, 0.05 + d * 0.012, { ...e, distance: d });
+    this.post(MSG.SOUND, 0.05 + d * 0.012, { ...e, distance: d });
   }
 
   // ── player actions ─────────────────────────────────────────────
@@ -275,12 +297,12 @@ export class World {
     this.events.emit('sound', { kind: kind === 'come' ? 'whistle' : 'cue', x: this.playerSpot.x, z: this.playerSpot.z, loud: 0.45 });
     const k = this.kinling;
     const d = Math.hypot(this.playerSpot.x - k.position.x, this.playerSpot.z - k.position.z);
-    this.manager.sendMessage(this.source, k, MSG.CUE, 0.12 + d * 0.012, { kind });
+    this.post(MSG.CUE, 0.12 + d * 0.012, { kind });
   }
 
   touch(region: TouchRegion, kind: 'stroke' | 'tap', x: number, y: number, z: number): void {
     this.touched();
-    this.manager.sendMessage(this.source, this.kinling, MSG.TOUCH, 0, { region, kind, x, y, z });
+    this.post(MSG.TOUCH, 0, { region, kind, x, y, z });
   }
 
   setWisp(on: boolean, x = 0, z = 0): void {

@@ -10,7 +10,7 @@
  * Animation and audio only ever read this state.
  */
 import {
-  ArriveBehavior, FleeBehavior, FollowPathBehavior, GameEntity, ObstacleAvoidanceBehavior, OnPathBehavior, Path,
+  FollowPathBehavior, GameEntity, ObstacleAvoidanceBehavior, OnPathBehavior, Path,
   PursuitBehavior, StateMachine, Telegram, Vector3, Vehicle, WanderBehavior,
 } from 'yuka';
 import { angleDelta, approach, clamp, clamp01, damp, lerp, smoothstep } from '../../core/math';
@@ -81,7 +81,7 @@ export interface ActionState {
 }
 
 export interface Travel {
-  kind: 'none' | 'path' | 'pursue' | 'wander' | 'flee';
+  kind: 'none' | 'path' | 'pursue' | 'wander';
   dest: Vec2 | null;
   arrive: number;
   path: Vec2[] | null;
@@ -131,12 +131,10 @@ export class Kinling extends Vehicle {
   /** Lifetime counters, a small part of the save. */
   stats = { distance: 0, naps: 0, berries: 0, catches: 0, pets: 0 };
 
-  private readonly arrive = new ArriveBehavior(new Vector3(), 2.2, 0.03);
   private readonly follow = new FollowPathBehavior(new Path(), 0.32);
   private readonly onPath = new OnPathBehavior(this.follow.path, 0.2, 0.6);
   private readonly pursuit = new PursuitBehavior(null as never, 0.8);
   private readonly wander: WanderBehavior;
-  private readonly flee = new FleeBehavior(new Vector3(), 4);
   private readonly avoid: ObstacleAvoidanceBehavior;
   private readonly force = new Vector3();
   private progressAnchor = { x: 0, z: 0, t: 0 };
@@ -173,7 +171,7 @@ export class Kinling extends Vehicle {
     this.avoid = new ObstacleAvoidanceBehavior(world.obstacles);
     this.avoid.dBoxMinLength = 0.9;
     this.avoid.weight = 1.6;
-    for (const b of [this.arrive, this.follow, this.onPath, this.pursuit, this.wander, this.flee, this.avoid]) {
+    for (const b of [this.follow, this.onPath, this.pursuit, this.wander, this.avoid]) {
       b.active = false;
       this.steering.add(b);
     }
@@ -222,12 +220,10 @@ export class Kinling extends Vehicle {
 
   // ── travel ─────────────────────────────────────────────────────
   private setSteering(kind: Travel['kind']): void {
-    this.arrive.active = false;
     this.follow.active = kind === 'path';
     this.onPath.active = kind === 'path' && (this.travel.path?.length ?? 0) > 2;
     this.pursuit.active = kind === 'pursue';
     this.wander.active = kind === 'wander';
-    this.flee.active = kind === 'flee';
     this.avoid.active = kind !== 'none';
     this.travel.kind = kind;
     this.stuckT = 0;
@@ -266,14 +262,6 @@ export class Kinling extends Vehicle {
     this.style = style;
     this.faceTarget = null;
     this.setSteering('wander');
-  }
-
-  travelFlee(x: number, z: number, style: MoveStyle): void {
-    this.flee.target.set(x, 0, z);
-    this.travel.dest = null;
-    this.travel.path = null;
-    this.style = style;
-    this.setSteering('flee');
   }
 
   stopTravel(): void {

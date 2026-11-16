@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { Task, TaskQueue } from 'yuka';
 import { AudioEngine } from '../audio/AudioEngine';
 import { clamp01, lerp } from '../core/math';
+import { FixedStepper } from '../core/stepper';
 import { Pointer, type Tool } from '../input/pointer';
 import { clearSave, exportSave, importSave, readSave, readSettings, writeSave, writeSettings, type Settings } from '../persistence/storage';
 import { CameraRig } from '../render/camera';
@@ -25,8 +26,6 @@ import { Hud } from '../ui/hud';
 import { Inspector } from '../ui/inspector';
 import { buildJournal } from './journal';
 
-const STEP = 1 / 60;
-const MAX_STEPS = 5;
 const AUTOSAVE_S = 20;
 
 class SaveTask extends Task {
@@ -52,7 +51,7 @@ export class App {
   private audio = new AudioEngine();
   private settings: Settings;
   private tasks = new TaskQueue();
-  private acc = 0;
+  private stepper = new FixedStepper(1 / 60, 5, 0.1);
   private last = 0;
   private prev = new THREE.Vector3();
   private interp = new THREE.Vector3();
@@ -136,13 +135,16 @@ export class App {
    * Capture mode (?capture): advance simulated time by exact amounts and
    * render one frame, so motion can be reviewed frame by frame on any machine.
    */
-  advance(seconds: number, frames = 1): void {
+  advance(seconds: number, frames = 1, renderAll = false): void {
     for (let i = 0; i < frames; i++) {
       this.captureT += (seconds / frames) * 1000;
+      this.skipRender = !renderAll && i < frames - 1;
       this.frame(this.captureT);
     }
+    this.skipRender = false;
   }
   private captureT = 0;
+  private skipRender = false;
 
   /** Build everything that depends on a particular world/individual. */
   private mount(): void {
@@ -314,7 +316,10 @@ export class App {
     });
     addEventListener('pagehide', () => this.save());
     addEventListener('keydown', (e) => {
-      if ((e.target as HTMLElement)?.tagName === 'INPUT' || e.metaKey || e.ctrlKey) return;
+      const target = e.target as HTMLElement | null;
+      if (e.key === 'Escape') { this.hud.closePanels(); target?.blur?.(); return; }
+      const typing = target?.tagName === 'SELECT' || (target?.tagName === 'INPUT' && ['text', 'range'].includes((target as HTMLInputElement).type));
+      if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
       const tools: Tool[] = ['hand', 'berry', 'ball', 'rattle', 'wisp', 'curio'];
       const n = Number(e.key);
       if (n >= 1 && n <= 6) this.setTool(tools[n - 1]);
@@ -322,7 +327,6 @@ export class App {
       else if (e.key === 's' || e.key === 'S') { this.unlockAudio(); this.cueSit(); }
       else if (e.key === 'm' || e.key === 'M') { this.settings.muted = !this.settings.muted; this.applySettings(); }
       else if (e.key === '`') this.inspector.toggle();
-      else if (e.key === 'Escape') this.hud.closePanels();
       else if (e.key === '+' || e.key === '=') this.cam.zoom(0.88);
       else if (e.key === '-' || e.key === '_') this.cam.zoom(1.14);
       else if (e.key === 'p' || e.key === 'P') { const k = this.world.kinling; this.unlockAudio(); this.world.touch('head', 'stroke', k.position.x, k.position.y + 0.5, k.position.z); }
@@ -336,7 +340,7 @@ export class App {
     const gap = this.hiddenAt ? (Date.now() - this.hiddenAt) / 1000 : 0;
     this.hiddenAt = 0;
     this.last = performance.now();
-    this.acc = 0;
+    this.stepper.reset();
     const report = applyAbsence(this.world, gap);
     if (report.applied) {
       const k = this.world.kinling;
@@ -356,16 +360,11 @@ export class App {
     this.clock += dt;
     const w = this.world, k = w.kinling;
 
-    this.acc += dt;
-    let steps = 0;
-    while (this.acc >= STEP && steps < MAX_STEPS) {
+    const steps = this.stepper.advance(raw, (h) => {
       this.prev.set(k.position.x, k.position.y, k.position.z);
-      w.step(STEP);
-      this.acc -= STEP;
-      steps++;
-    }
-    if (steps === MAX_STEPS) this.acc = 0; // bounded catch-up: drop the backlog
-    const alpha = this.acc / STEP;
+      w.step(h);
+    });
+    const alpha = this.stepper.alpha;
     this.interp.set(lerp(this.prev.x, k.position.x, alpha), lerp(this.prev.y, k.position.y, alpha), lerp(this.prev.z, k.position.z, alpha));
 
     // keyboard camera
@@ -406,7 +405,7 @@ export class App {
     const purring = this.petting && k.now - k.touch.at < 0.8 && k.touch.liked > 0.1;
     this.audio.purr(purring, 0.4 + 0.5 * clamp01(k.touch.liked), w.identity.voice, k.position.x, k.position.z);
 
-    this.stage.render();
+    if (!this.skipRender) this.stage.render();
     this.afterFrame(dt, raw, steps);
   };
 
