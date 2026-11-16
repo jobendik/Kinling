@@ -4,7 +4,9 @@ A small original creature with a mind of its own, living in a sheltered glade in
 
 A kinling is a soft, big-eared animal with a glowing seed-lantern at the end of its tail. It gets hungry, thirsty, tired, bored and lonely; it notices things, makes up its own mind, and remembers what happened. Two kinlings from different seeds behave differently, and the same one is recognisably itself when you come back.
 
-![The glade at dusk](docs/media/glade-dusk.jpg)
+![A kinling tilting its head at dusk](docs/media/glade-dusk.jpg)
+
+![Chasing a thrown ball](docs/media/fetch.gif)
 
 Everything is generated in code: the creature's body, fur, animation, voice, the glade and its sounds. There are no model, texture or audio files, and no network services.
 

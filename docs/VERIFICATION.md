@@ -41,13 +41,13 @@ What was run, what it showed, and what nobody has checked. Environment: Linux co
 
 ### Browser checks (`scripts/browser-check.mjs`, production build)
 
-Loads and starts (about 9 s here, mostly the one-off creature sculpt); the scene renders; a goal is chosen; the berry tool drops a berry; audio unlocks on the first gesture; the ball tool tosses the ball; the Call button and the `S` key each reach the creature exactly once; dragging across the creature produces strokes; dragging the ground orbits; the wheel zooms; mute and reduced motion persist; the inspector shows live scores; reload restores the same individual with its learning and lived time; a save aged by three hours produces one bounded "you were away" transition; the canvas follows a resize; at 390×780 with touch the dock fits and its targets are at least 44×67 px; tap-tool-then-tap-ground works; no console errors or uncaught exceptions.
+Loads and starts (about 8 s here, mostly the one-off creature sculpt); the scene renders; a goal is chosen; the berry tool drops a berry; audio unlocks on the first gesture; the ball tool tosses the ball; the Call button and the `S` key each reach the creature exactly once; dragging across the creature produces strokes; dragging the ground orbits; the wheel zooms; mute and reduced motion persist; the inspector shows live scores; reload restores the same individual with its learning and lived time; a save aged by three hours produces one bounded "you were away" transition; the canvas follows a resize; at 390×780 with touch the dock fits and its targets are at least 44×53 px; tap-tool-then-tap-ground works; no console errors or uncaught exceptions.
 
 ## Visual review
 
 Done from deterministic captures (`scripts/capture.mjs` steps simulated time exactly and screenshots each frame), not by watching it live:
 
-- Rest-pose turnarounds and silhouettes in the creature lab (`/lab.html`).
+- Rest-pose views and black silhouettes from the side, front and back in the creature lab (`/lab.html`, [lab sheet](media/lab.jpg)).
 - Frame sheets of the walk and trot from the side ([docs/media/trot-frames.jpg](media/trot-frames.jpg)).
 - A sheet of poses: sit, lie, sleep curl, eat, play-bow, head tilt, flinch, pounce, stretch, groom ([docs/media/poses.jpg](media/poses.jpg)).
 - Day, dusk and night framings at high detail ([glade-dusk](media/glade-dusk.jpg), [face](media/face.jpg), [night-nest](media/night-nest.jpg), [glade-wide](media/glade-wide.jpg)).
