@@ -1,5 +1,5 @@
 /**
- * AudioEngine: fully procedural Web Audio for Kinling. No files, no libraries.
+ * AudioEngine: Web Audio synthesis and field recordings for Kinling.
  *
  * Signal flow
  *   one-shot voice -> voice gain (level x distance) -> stereo pan -> bus (voice | world | ambience | ui)
@@ -23,6 +23,9 @@
  * Nothing touches `window` or `AudioContext` until `unlock()`, so the module imports under Node.
  * Every public method is a silent no-op while locked, suspended or disposed, and never throws.
  */
+import robinRecording from './recordings/robin.ogg?url';
+import frogRecording from './recordings/frog.wav?url';
+import type { Species } from '../sim/wildlife';
 import type { CurioKind, VocalKind } from '../sim/types';
 
 export type Surface = 'grass' | 'stone' | 'water';
@@ -190,6 +193,7 @@ function envelope(attack: number, release: number): Float32Array {
 
 export class AudioEngine {
   private g: Graph | null = null;
+  private recordings: Partial<Record<Species, AudioBuffer>> = {};
   private disposed = false;
   private listening = false;
   private volume = 0.8;
@@ -227,6 +231,8 @@ export class AudioEngine {
         try { this.g = this.build(ctx); } catch { void ctx.close().catch(noop); return false; }
         document.addEventListener('visibilitychange', this.onVisibility);
         this.listening = true;
+        void this.loadRecording(ctx, 'robin', robinRecording);
+        void this.loadRecording(ctx, 'frog', frogRecording);
       }
       const ctx = this.g.ctx;
       // resume() can stay pending forever when called outside a gesture: never wait on it for long.
@@ -235,6 +241,33 @@ export class AudioEngine {
       }
       return this.unlocked;
     } catch { return false; }
+  }
+
+  private async loadRecording(ctx: AudioContext, species: Species, url: string): Promise<void> {
+    try {
+      const response = await fetch(url);
+      if (response.ok) this.recordings[species] = await ctx.decodeAudioData(await response.arrayBuffer());
+    } catch { /* use the synthesized call if decoding is unavailable */ }
+  }
+
+  wildlifeCall(species: Species, x: number, z: number): void {
+    this.play((g, t) => {
+      const v = this.at(g, 'voice', species === 'robin' ? .68 : .48, x, z, .10);
+      if (!v) return;
+      const buffer = this.recordings[species];
+      if (!buffer) {
+        this.tone(v, t, { f0: species === 'robin' ? 2300 : 210, f1: species === 'robin' ? 3200 : 130, tau: .11, gain: .32 });
+        return;
+      }
+      const offset = species === 'robin' ? 4 * Math.floor(Math.random() * 3) : 0;
+      const duration = Math.min(buffer.duration - offset, species === 'robin' ? 4 : buffer.duration);
+      const source = g.ctx.createBufferSource();
+      source.buffer = buffer;
+      const env = g.ctx.createGain();
+      shape(env.gain, t, { gain: 1, attack: .025, dur: duration, release: .08 });
+      source.connect(env); env.connect(v.in); v.chain.push(env);
+      this.run(v, source, t, t + duration, offset);
+    });
   }
 
   setVolume(v: number): void { this.volume = clamp01(v); this.applyMaster(0.05); }
@@ -461,12 +494,13 @@ export class AudioEngine {
     });
   }
 
-  whistle(kind: 'come' | 'sit'): void {
+  whistle(kind: 'come' | 'sit' | 'spin'): void {
     this.play((g, t) => {
       const v = this.open(g, 'world', 0.14, 0, 0.35);
       if (!v) return;
       const r = jitter(0.012);
       if (kind === 'come') this.airy(v, t, 0.5, 1320 * r, 1760 * r, 0.19, 0.07); // "whee-eet", up a fourth
+      else if (kind === 'spin') this.airy(v, t, .42, 1900 * r, 1150 * r, .30, .04);
       else for (const at of [0, 0.21]) this.airy(v, t + at, 0.12, 1480 * r, 1480 * r, 0, 0);
     });
   }
@@ -628,7 +662,7 @@ export class AudioEngine {
   }
 
   /** Starts a source inside a voice; the voice is released when its last source has ended. */
-  private run(v: Voice, src: Source, t0: number, t1: number): void {
+  private run(v: Voice, src: Source, t0: number, t1: number, offset?: number): void {
     v.pending++;
     v.sources.push(src);
     src.onended = (): void => {
@@ -636,7 +670,7 @@ export class AudioEngine {
       try { src.disconnect(); } catch { /* already gone */ }
       if (--v.pending <= 0) this.release(v);
     };
-    if ('buffer' in src) src.start(t0, Math.random() * 1.8); else src.start(t0);
+    if ('buffer' in src) src.start(t0, offset ?? Math.random() * 1.8); else src.start(t0);
     src.stop(Math.max(t1, t0 + 0.01));
   }
 

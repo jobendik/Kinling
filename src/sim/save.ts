@@ -12,6 +12,7 @@ import { MEMORY_CAPACITY, type MemoryData } from './memory';
 import { NEED_KEYS, type NeedValues } from './needs';
 import { heightAt, isWalkable, nearestWalkable } from './terrain';
 import { ACTIVITIES, CURIO_KINDS, type CurioKind, type Posture } from './types';
+import type { WildlifeProgress } from './wildlife';
 import { BUSH_CAPACITY, World } from './world';
 
 export const SAVE_VERSION = 1;
@@ -29,6 +30,7 @@ export interface SaveData {
   kinling: { x: number; z: number; heading: number; posture: Posture; stats: Record<string, number> };
   world: {
     toys: Record<'ball' | 'rattle', { x: number; y: number; z: number }>;
+    wildlife?: WildlifeProgress;
     bushStock: number;
     berries: Array<{ x: number; z: number; fromPlayer: boolean }>;
     curio: { kind: CurioKind; x: number; z: number } | null;
@@ -52,6 +54,7 @@ export function serialize(world: World, now = Date.now()): SaveData {
     kinling: { x: k.position.x, z: k.position.z, heading: k.heading, posture: k.posture, stats: { ...k.stats } },
     world: {
       toys: { ball: toy(world.toys.ball), rattle: toy(world.toys.rattle) },
+      wildlife: { ...world.wildlife.progress },
       bushStock: world.bushStock,
       berries: world.berries.filter((b) => !b.eaten).map((b) => ({ x: b.position.x, z: b.position.z, fromPlayer: b.fromPlayer })),
       curio: world.curio ? { kind: world.curio.kind, x: world.curio.position.x, z: world.curio.position.z } : null,
@@ -106,7 +109,7 @@ export function parseSave(input: unknown): SaveData | null {
     learn.habituation[key.slice(0, 24)] = { h: num(h.h, 0, 0, 1), n: num(h.n, 0, 0, 1e7), lastAt: num(h.lastAt, 0) };
   }
   for (const [key, v] of Object.entries(obj(L.familiarity))) learn.familiarity[key.slice(0, 24)] = num(v, 0, 0, 1);
-  for (const cue of ['come', 'sit'] as const) {
+  for (const cue of ['come', 'sit', 'spin'] as const) {
     const c = obj(obj(L.cues)[cue]);
     learn.cues[cue] = { strength: num(c.strength, learn.cues[cue].strength, 0, 1), trials: num(c.trials, 0, 0, 1e7), rewards: num(c.rewards, 0, 0, 1e7) };
   }
@@ -155,6 +158,8 @@ export function parseSave(input: unknown): SaveData | null {
   for (const key of Object.keys(defaults.kinling.stats)) stats[key] = num(obj(K.stats)[key], 0, 0, 1e9);
 
   const W = obj(m.world);
+  const v = obj(W.wildlife);
+  const wildlife = { meals: Math.floor(num(v.meals, 0, 0, 1e7)), replies: Math.floor(num(v.replies, 0, 0, 1e7)), best: Math.floor(num(v.best, 0, 0, 6)) };
   const toys = defaults.world.toys;
   for (const kind of ['ball', 'rattle'] as const) {
     const t = obj(obj(W.toys)[kind]);
@@ -178,7 +183,7 @@ export function parseSave(input: unknown): SaveData | null {
     dayTime: num(m.dayTime, 0.6, 0, 0.99999),
     needs, affect, learn, memory,
     kinling: { x: kx, z: kz, heading: num(K.heading, 0, -1e3, 1e3), posture, stats },
-    world: { toys, bushStock: Math.round(num(W.bushStock, 2, 0, BUSH_CAPACITY)), berries, curio },
+    world: { toys, wildlife, bushStock: Math.round(num(W.bushStock, 2, 0, BUSH_CAPACITY)), berries, curio },
     investigatedAt,
   };
 }
@@ -187,6 +192,7 @@ export function parseSave(input: unknown): SaveData | null {
 export function restore(data: SaveData): World {
   const world = new World(data.identity);
   const k = world.kinling;
+  Object.assign(world.wildlife.progress, data.world.wildlife);
   world.time = data.time;
   world.dayTime = data.dayTime;
   Object.assign(k.needs.values, data.needs);

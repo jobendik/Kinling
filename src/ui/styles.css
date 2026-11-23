@@ -118,3 +118,37 @@ select option { background: var(--panel-solid); }
   .corner { right: 10px; }
 }
 @media (prefers-reduced-motion: reduce) { .veil, .toast, .naming { transition: none; } .veil .ember { animation: none; } }
+
+.animals, .wild-panel {
+  position: absolute; left: 50%; transform: translateX(-50%); background: var(--panel-solid);
+  border: 1px solid var(--line); box-shadow: 0 6px 22px #04100d55;
+}
+.animals { display: flex; gap: 2px; padding: 3px; border-radius: 24px; bottom: calc(84px + var(--safe-b)); }
+.animals button { padding: 6px 14px; border-radius: 20px; font-size: 13px; color: var(--muted); }
+.animals [aria-pressed=true] { background: #374a39; color: #f4ead2; }
+.toast { bottom: calc(132px + var(--safe-b)); }
+.watching .animals { bottom: calc(145px + var(--safe-b)); }
+.watching .dock, .watching .plate, .watching .toast, .watching .naming { display: none; }
+.wild-panel { bottom: calc(12px + var(--safe-b)); width: min(385px, calc(100vw - 18px)); padding: 12px 16px; border-radius: 18px; }
+.wild-panel header { display: flex; align-items: baseline; justify-content: space-between; gap: 5px; }
+.wild-panel strong { font: 500 22px var(--display); color: #f4ead2; }
+.wild-panel small, .wild-panel [role=status] { color: #c4c6b3; }
+.wild-panel [role=status] { display: block; font-size: 13px; padding: 4px 0 8px; }
+.wild-actions { display: flex; gap: 5px; }
+.wild-actions button { flex: 1; min-height: 36px; background: #35463b; border-radius: 9px; font-size: 13px; }
+.wild-actions button:disabled { opacity: .54; cursor: default; }
+.wild-actions button.lit { opacity: 1; background: #efd591; color: #291e0c; }
+.wild-actions button:not(:disabled):hover, .animals button:hover { background: #495e4c; }
+.sheet, .journal, .naming { z-index: 2; }
+.sheet a { color: #efcb8b; }
+
+.wild-actions:has(> :nth-child(4)) button:not(:first-child)::before {
+  content: ''; display: inline-block; width: 7px; height: 7px; margin-right: 4px; border-radius: 50%; background: #f3b34d;
+}
+.wild-actions:has(> :nth-child(4)) button:nth-child(3)::before { background: #ed93a5; }
+.wild-actions:has(> :nth-child(4)) button:nth-child(4)::before { background: #ffedc1; }
+@media (max-width: 420px) {
+  .wild-actions button { min-height: 44px; }
+  .watching .animals { bottom: calc(155px + var(--safe-b)); }
+  .dock .tool { padding-inline: 3px; }
+}

@@ -33,6 +33,7 @@ export function buildJournal(world: World, now = Date.now()): JournalData {
   const learning: string[] = [];
   const how = (s: number): string => (s > 0.8 ? 'reliably' : s > 0.55 ? 'usually' : s > 0.3 ? 'sometimes' : s > 0.12 ? 'now and then' : 'not yet');
   if (L.cues.come.trials > 0) learning.push(`comes when called: ${how(L.cues.come.strength)}`);
+  if (L.cues.spin.trials > 0) learning.push(`spins on cue: ${how(L.cues.spin.strength)}`);
   if (L.cues.sit.trials > 0) learning.push(`sits on cue: ${how(L.cues.sit.strength)}`);
   learning.push(L.bond > 0.7 ? 'trusts you completely' : L.bond > 0.45 ? 'trusts you' : L.bond > 0.28 ? 'getting to know you' : 'still wary of you');
   const used = Object.entries(L.habituation).filter(([, v]) => v.h > 0.5).map(([key]) => key);

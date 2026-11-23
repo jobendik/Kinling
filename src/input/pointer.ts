@@ -5,13 +5,13 @@
  */
 import * as THREE from 'three';
 import type { TouchRegion } from '../sim/identity';
-import { heightAt } from '../sim/terrain';
+import { heightAt, WATER_Y } from '../sim/terrain';
 import type { ToyKind } from '../sim/types';
 import type { World } from '../sim/world';
 import type { KinlingBody } from '../render/creature/build';
 import type { CameraRig } from '../render/camera';
 
-export type Tool = 'hand' | 'berry' | 'ball' | 'rattle' | 'wisp' | 'curio';
+export type Tool = 'hand' | 'berry' | 'ball' | 'rattle' | 'wisp' | 'curio' | 'watch';
 
 export interface PointerHooks {
   /** A click on the ground with a tool selected. */
@@ -112,6 +112,11 @@ export class Pointer {
     return best;
   }
 
+  private surfaceAt(x: number, z: number): number {
+    const y = heightAt(x, z);
+    return this.tool === 'watch' ? Math.max(y, WATER_Y + .035) : y;
+  }
+
   /** March the ray against the analytic terrain. */
   private pickGround(out: THREE.Vector3): boolean {
     const o = this.ray.origin, d = this.ray.direction;
@@ -120,11 +125,11 @@ export class Pointer {
     for (let i = 0; i < 160; i++) {
       t += 0.2;
       const y = o.y + d.y * t;
-      if (y < heightAt(o.x + d.x * t, o.z + d.z * t)) {
+      if (y < this.surfaceAt(o.x + d.x * t, o.z + d.z * t)) {
         let a = prev, b = t;
         for (let j = 0; j < 12; j++) {
           const m = (a + b) / 2;
-          if (o.y + d.y * m < heightAt(o.x + d.x * m, o.z + d.z * m)) b = m; else a = m;
+          if (o.y + d.y * m < this.surfaceAt(o.x + d.x * m, o.z + d.z * m)) b = m; else a = m;
         }
         out.copy(d).multiplyScalar(b).add(o);
         return Math.hypot(out.x, out.z) < 14;
@@ -154,7 +159,7 @@ export class Pointer {
     this.strokeTravel = 0;
     if (e.button === 2 || e.button === 1) { this.mode = 'orbit'; return; }
     this.setRay(e.clientX, e.clientY);
-    const creature = this.pickCreature();
+    const creature = this.tool === 'watch' ? null : this.pickCreature();
     const toy = this.tool === 'hand' ? this.pickToy() : null;
     if (creature && (!toy || creature.dist < this.toyMesh(toy).position.distanceTo(this.ray.origin))) {
       this.mode = 'pet';

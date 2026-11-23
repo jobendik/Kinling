@@ -15,6 +15,7 @@ const ICONS: Record<string, string> = {
   wisp: svg('<circle cx="12" cy="11" r="2.6"/><path d="M12 3.5v2M12 16.5v4M4.5 11h2M17.5 11h2M6.8 5.8l1.4 1.4M15.8 14.8l1.4 1.4M17.2 5.8l-1.4 1.4M8.2 14.8l-1.4 1.4"/>'),
   curio: svg('<path d="M12 20.5c-4.4 0-7-2.6-7-6 0-4.6 3.4-9.5 7-11 3.6 1.5 7 6.4 7 11 0 3.4-2.6 6-7 6Z"/><path d="M12 16a2.5 2.5 0 1 0-2.5-2.5"/>'),
   call: svg('<path d="M4.5 10.5h7l6-4v11l-6-4h-7z"/><path d="M19.5 9.5c.8.7 1.2 1.5 1.2 2.5s-.4 1.8-1.2 2.5M7.5 13.5v4.5h3v-4.5"/>'),
+  spin: svg('<path d="M7 7a7 7 0 1 1-1.9 7M7 3.5V8h4.5"/><path d="M10 13a2.2 2.2 0 1 0 3-2"/>'),
   sit: svg('<path d="M6 19c0-4 1-6.5 3-8.5V6.5l2.2 1.6c2.6-.3 5 .6 6.3 2.9 1 1.8 1.2 4.6.5 8z"/><path d="M6 19h12.5"/>'),
   sound: svg('<path d="M4.5 9.5h3.5l4.5-3.5v12L8 14.5H4.5z"/><path d="M15.5 9.2a4 4 0 0 1 0 5.6M18 6.8a7.4 7.4 0 0 1 0 10.4"/>'),
   mute: svg('<path d="M4.5 9.5h3.5l4.5-3.5v12L8 14.5H4.5z"/><path d="m16 9.5 4.5 5M20.5 9.5 16 14.5"/>'),
@@ -34,6 +35,7 @@ export interface HudHooks {
   tool(tool: Tool): void;
   call(): void;
   cueSit(): void;
+  cueSpin(): void;
   settings(change: Partial<Settings>): void;
   name(name: string): void;
   exportSave(): void;
@@ -105,7 +107,9 @@ export class Hud {
     call.addEventListener('click', () => { hooks.gesture(); hooks.call(); });
     const sit = el('button', { class: 'tool act', 'aria-label': 'Sit cue: practise a cue; reward it when it sits', title: 'Give the "sit" cue — reward it with a stroke or a berry when it sits (S)' }, `${ICONS.sit}<span>Sit</span><kbd>S</kbd>`);
     sit.addEventListener('click', () => { hooks.gesture(); hooks.cueSit(); });
-    dock.append(call, sit);
+    const spin = el('button', { class: 'tool act', 'aria-label': 'Spin cue: reward a twirl', title: 'Teach a spin (T)' }, `${ICONS.spin}<span>Spin</span><kbd>T</kbd>`);
+    spin.addEventListener('click', () => { hooks.gesture(); hooks.cueSpin(); });
+    dock.append(call, sit, spin);
     root.append(dock);
 
     this.toastEl = el('div', { class: 'toast', role: 'status', 'aria-live': 'polite' });
@@ -140,6 +144,10 @@ export class Hud {
       <h3>Sound</h3>
       <div class="field"><label for="set-volume">Volume</label><input id="set-volume" type="range" min="0" max="100" step="1"></div>
       <div class="field"><label for="set-mute">Mute</label><input id="set-mute" type="checkbox"></div>
+      <details class="note"><summary>Wildlife sound credits</summary>
+        <p><a href="https://commons.wikimedia.org/wiki/File:European_Robin_(Erithacus_rubecula)_(W1CDR0001425_BD16).ogg" target="_blank" rel="noreferrer">Robin song</a> by Lawrence Shove, © The British Library Board · <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noreferrer">CC BY-SA 4.0</a>. Trimmed and level-adjusted.</p>
+        <p><a href="https://commons.wikimedia.org/wiki/File:Single_Frog_Croak.oga" target="_blank" rel="noreferrer">Single Frog Croak</a> by MichaeltheFox8621 · <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noreferrer">CC BY-SA 4.0</a>. Trimmed and level-adjusted.</p>
+      </details>
       <h3>Comfort</h3>
       <div class="field"><label for="set-motion">Reduced motion</label><input id="set-motion" type="checkbox"></div>
       <div class="field"><label for="set-quality">Detail</label>

@@ -8,7 +8,7 @@ A kinling is a soft, big-eared animal with a glowing seed-lantern at the end of 
 
 ![Chasing a thrown ball](docs/media/fetch.gif)
 
-Everything is generated in code: the creature's body, fur, animation, voice, the glade and its sounds. There are no model, texture or audio files, and no network services.
+The kinling shares its glade with a robin and a pond frog. The models, animation and kinling voice are procedural. Real bird and frog recordings ship with the game and play locally.
 
 ## Run it
 
@@ -44,6 +44,12 @@ Watch first. In the opening minute it notices the toys lying in the glade and de
 | Call it | **Call** (`C`): a whistle. It may come, come later, or decline. |
 | Teach it | **Sit** (`S`). It has no idea what this means at first. Reward it (a stroke or a berry) whenever it sits and the cue becomes reliable. |
 
+Choose **Robin** to watch it forage. Scatter seeds to earn its trust, then whistle from its perch for a reply. After three meals it will fly over to an awake kinling. At night it stays on its perch unless invited down.
+
+Choose **Frog** and **Start chorus** to play a memory game. Watch the flowers light up as the frog jumps. Repeat the trail by tapping the floating pads, using their named buttons or pressing `1`, `2`, `3`. Trails grow from two to six hops. The best trail and the robin's trust carry over to the next visit.
+
+Choose **Kinling** to return to your companion. **Spin** (`T`) gives the twirl cue. A well-timed stroke reinforces a successful turn. The journal tracks progress on the trick.
+
 It does plenty unprompted: forages, drinks at the pond, naps where it feels comfortable, plays alone, brings you a toy, asks for company.
 
 The top-left plate gives a one-line reading; click it for a plain-language journal. Sound, reduced motion, detail level, save export/import and "start over" are under the gear. `` ` `` opens the developer inspector.
@@ -68,7 +74,7 @@ src/
   sim/creature Kinling (movement owner), senses, brain (Think), goals, body states
   render/      stage, sky, environment, props, camera
   render/creature  sculpt (sdf, anatomy, build), materials, rig (animation)
-  audio/       procedural Web Audio engine
+  audio/       Web Audio engine and wildlife recordings
   input/       pointer and touch gestures
   ui/          HUD, journal, developer inspector
   app/         wiring and the main loop
@@ -80,4 +86,7 @@ scripts/       browser checks, deterministic capture, screenshots
 
 Read [docs/VERIFICATION.md](docs/VERIFICATION.md) before trusting any claim here. In short: behaviour is covered by automated tests and the app was driven in headless Chrome, but it was developed without a GPU or speakers, so real-hardware frame rate, the feel of the animation in motion, and how the audio sounds have not been checked by a person.
 
-MIT licensed.
+The game code is MIT licensed. The following audio excerpts and their adaptations are distributed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
+
+- European robin recorded by Lawrence Shove, Devon, 1961. © The British Library Board, W1CDR0001425 BD16. Three excerpts, mixed to mono, trimmed, faded and level-adjusted. [Original recording](https://commons.wikimedia.org/wiki/File:European_Robin_%28Erithacus_rubecula%29_%28W1CDR0001425_BD16%29.ogg)
+- Single Frog Croak by MichaeltheFox8621. One croak mixed to mono, trimmed, faded, level-adjusted and converted to WAV. [Original recording](https://commons.wikimedia.org/wiki/File:Single_Frog_Croak.oga)

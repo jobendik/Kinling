@@ -54,7 +54,7 @@ try {
   check('loads and starts', true, `${((Date.now() - t0) / 1000).toFixed(1)}s to ready`);
   check('scene is rendering', (await colours(page)) > 40, `${await colours(page)} distinct colours sampled`);
   const title = await page.title();
-  check('interface text is English and present', (await page.locator('.dock .tool').count()) === 8 && /Kinling/.test(title));
+  check('interface text is English and present', (await page.locator('.dock .tool').count()) === 9 && /Kinling/.test(title));
   await sleep(2500);
   const s1 = await stats(page);
   check('simulation advances and a goal is chosen', s1.time > 0.5 && !!s1.goal, `t=${s1.time}s goal="${s1.goal}"`);
@@ -155,6 +155,54 @@ try {
   check('touch: tap a tool, tap the ground', (await mp.evaluate('window.__kinling.world.berries.length')) === 1);
   check('scene renders at phone size', (await colours(mp)) > 40);
   if (shots) await mp.screenshot({ path: `${shots}/check-phone.png` });
+  // Use the game's deterministic clock to exercise the complete wildlife games on a phone.
+  await mp.goto(`${base}/?fresh=1&seed=11&q=low&capture`);
+  await ready(mp);
+  const advance = seconds => mp.evaluate(s => window.__kinling.advance(s, Math.ceil(s * 30)), seconds);
+  const button = name => mp.getByRole('button', { name, exact: true });
+  await mp.evaluate(() => {
+    window.recordedCalls = new Set();
+    const start = AudioBufferSourceNode.prototype.start;
+    AudioBufferSourceNode.prototype.start = function (...args) {
+      for (const [species, sample] of Object.entries(window.__kinling.audio.recordings)) {
+        if (this.buffer === sample) window.recordedCalls.add(species);
+      }
+      return start.apply(this, args);
+    };
+    window.heardSpin = false;
+    window.__kinling.world.events.on('cue', e => { if (e.kind === 'spin') window.heardSpin = true; });
+  });
+  await mp.getByRole('button', { name: 'Spin cue: reward a twirl' }).tap();
+  await advance(.3);
+  check('spin button sends the new training cue', await mp.evaluate(() => window.heardSpin));
+  await button('Robin').tap();
+  await button('Scatter seed').tap();
+  await advance(5.3);
+  await button('Whistle').tap();
+  await advance(.9);
+  check('robin eats and answers a whistle', await mp.evaluate(() => {
+    const p = window.__kinling.world.wildlife.progress;
+    return p.meals === 1 && p.replies === 1;
+  }));
+  await button('Frog').tap();
+  await advance(.2);
+  if (shots) await mp.screenshot({ path: `${shots}/check-pond.png` });
+  await button('Start chorus').tap();
+  await advance(4);
+  const trail = await mp.evaluate(() => window.__kinling.world.wildlife.sequence);
+  const hit = await mp.evaluate(index => {
+    const a = window.__kinling;
+    const point = a.visitors.lilyPads[index].position.clone().project(a.stage.camera);
+    return { x: (1 + point.x) * innerWidth / 2, y: (1 - point.y) * innerHeight / 2 };
+  }, trail[0]);
+  await mp.touchscreen.tap(hit.x, hit.y);
+  await advance(.6);
+  await button(['Amber', 'Rose', 'Pearl'][trail[1]]).tap();
+  await advance(.6);
+  check('pond tap and flower button complete the demonstrated trail', await mp.evaluate(() => window.__kinling.world.wildlife.progress.best === 2));
+  check('both local recordings played through Web Audio', await mp.evaluate(() => window.recordedCalls.size === 2));
+  await button('Kinling').tap();
+  check('returning to the kinling restores the original tools', await mp.locator('.dock').isVisible());
   await mobile.close();
 
   check('no console errors or uncaught exceptions', errors.length === 0, errors.slice(0, 4).join(' | '));

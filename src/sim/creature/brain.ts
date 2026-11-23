@@ -729,6 +729,7 @@ export class Brain {
       } else if (roll < p + (1 - p) * (0.35 + 0.4 * k.traits.playfulness)) {
         response = 'offered';
         offered = k.rng.pick(['playBow', 'headTilt', 'chirp', 'spin', 'pawAt'] as const);
+        if (kind === 'spin' && offered === 'spin') response = 'correct';
         detail = offered;
       } else response = 'puzzled';
       readyAt = now + 0.25 + 0.9 * (1 - s) * k.rng.next();

@@ -13,6 +13,7 @@ import type { Identity, TouchRegion } from './identity';
 import { Nav } from './nav';
 import { BUSH, DEFAULT_PLAYER_SPOT, heightAt, isWalkable, nearestWalkable, NEST, OBSTACLES, POND, SPAWN, waterDepthAt } from './terrain';
 import { MSG, type CueKind, type CurioKind, type SimEvents, type SoundEvent, type ToyKind, type Vec2 } from './types';
+import { Wildlife } from './wildlife';
 
 export const DAY_LENGTH_S = 24 * 60;
 export const MAX_PLAYER_BERRIES = 5;
@@ -90,6 +91,7 @@ export class World {
   readonly manager = new EntityManager();
   readonly nav: Nav;
   readonly rng: Rng;
+  readonly wildlife: Wildlife;
   readonly kinling: Kinling;
   readonly toys: Record<ToyKind, Toy>;
   readonly wisp = new Wisp();
@@ -114,6 +116,7 @@ export class World {
   constructor(readonly identity: Identity, opts: { fresh?: boolean } = {}) {
     this.nav = sharedNav ?? (sharedNav = new Nav());
     this.rng = new Rng(identity.seed).fork('world');
+    this.wildlife = new Wildlife(this);
     this.source.name = 'world';
     this.source.canActivateTrigger = false;
     this.manager.add(this.source);
@@ -151,6 +154,7 @@ export class World {
     this.kinling.inNest = false;
     this.kinling.inShallows = false;
     this.manager.update(dt);
+    this.wildlife.step(dt);
     if (this.pending.length) {
       for (let i = 0; i < this.pending.length; ) {
         const p = this.pending[i];
@@ -294,7 +298,7 @@ export class World {
   /** A whistle or a taught cue, sounded from where the player is. */
   cue(kind: CueKind): void {
     this.touched();
-    this.events.emit('sound', { kind: kind === 'come' ? 'whistle' : 'cue', x: this.playerSpot.x, z: this.playerSpot.z, loud: 0.45 });
+    this.events.emit('sound', { kind: kind === 'come' ? 'whistle' : 'cue', cue: kind, x: this.playerSpot.x, z: this.playerSpot.z, loud: 0.45 });
     const k = this.kinling;
     const d = Math.hypot(this.playerSpot.x - k.position.x, this.playerSpot.z - k.position.z);
     this.post(MSG.CUE, 0.12 + d * 0.012, { kind });

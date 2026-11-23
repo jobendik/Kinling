@@ -60,7 +60,7 @@ export class Learning {
       plays: { ball: 0, rattle: 0, wisp: 0 },
       habituation: {},
       familiarity: {},
-      cues: { come: { strength: 0.25 + 0.2 * t.sociability, trials: 0, rewards: 0 }, sit: { strength: 0.04, trials: 0, rewards: 0 } },
+      cues: { come: { strength: 0.25 + 0.2 * t.sociability, trials: 0, rewards: 0 }, sit: { strength: 0.04, trials: 0, rewards: 0 }, spin: { strength: 0.18, trials: 0, rewards: 0 } },
       bond: 0.22 + 0.16 * t.sociability,
       places: [
         { label: 'nest', x: NEST.x, z: NEST.z, comfort: 0.62, visits: 0, innate: true },

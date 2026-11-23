@@ -22,6 +22,9 @@ import { restore, serialize, type SaveData } from '../sim/save';
 import { POND, WATER_Y, heightAt } from '../sim/terrain';
 import { CURIO_KINDS } from '../sim/types';
 import { World } from '../sim/world';
+import { WildlifeView } from '../render/wildlife';
+import { PADS, type Subject } from '../sim/wildlife';
+import { WildlifeHud } from '../ui/wildlife';
 import { Hud } from '../ui/hud';
 import { Inspector } from '../ui/inspector';
 import { buildJournal } from './journal';
@@ -47,6 +50,10 @@ export class App {
   private cam: CameraRig;
   private pointer!: Pointer;
   private hud: Hud;
+  private visitors!: WildlifeView;
+  private wildlifeHud: WildlifeHud;
+  private watchPoint = new THREE.Vector3();
+  private kinlingCamera = { distance: 4.3, polar: 1.25, azimuth: .12 };
   private inspector!: Inspector;
   private audio = new AudioEngine();
   private settings: Settings;
@@ -87,6 +94,7 @@ export class App {
       tool: (t) => this.setTool(t),
       call: () => this.call(),
       cueSit: () => this.cueSit(),
+      cueSpin: () => this.cueSpin(),
       settings: () => this.applySettings(),
       name: (n) => { this.world.identity.name = n; this.save(); },
       exportSave: () => exportSave(serialize(this.world)),
@@ -96,6 +104,13 @@ export class App {
       journal: () => buildJournal(this.world),
       gesture: () => this.unlockAudio(),
     }, this.settings);
+    this.wildlifeHud = new WildlifeHud(uiRoot, {
+      watch: subject => this.watch(subject),
+      scatter: () => this.world.wildlife.scatter(),
+      whistle: () => { this.audio.whistle('come'); this.world.wildlife.whistle(); },
+      chorus: () => this.world.wildlife.startChorus(),
+      pad: i => this.world.wildlife.choosePad(i),
+    });
     this.bindWindow();
   }
 
@@ -161,6 +176,10 @@ export class App {
       this.audio.footstep(e.x, e.z, e.strength * (k.style === 'sneak' ? 0.4 : 1), e.wet ? 'water' : 'grass');
       if (e.wet) this.env.ripple(e.x, e.z, 0.3 + 0.3 * e.strength);
     };
+    this.visitors?.dispose();
+    this.visitors = new WildlifeView(this.stage.scene);
+    if (this.wildlifeHud.subject !== 'kinling') Object.assign(this.cam, this.kinlingCamera);
+    this.wildlifeHud.select('kinling');
     this.props?.toys.ball.removeFromParent();
     this.props = new Props(this.stage.scene, w);
     this.pointer = new Pointer(this.canvas, this.stage.camera, this.cam, w, () => this.body, (kind) => this.props.toys[kind], {
@@ -187,13 +206,14 @@ export class App {
   private subscribe(): void {
     const w = this.world, k = w.kinling, ev = w.events, a = this.audio;
     const on = <K extends Parameters<typeof ev.on>[0]>(type: K, fn: Parameters<typeof ev.on<K>>[1]): void => { this.unsub.push(ev.on(type, fn)); };
+    on('wildlifeCall', e => a.wildlifeCall(e.species, e.x, e.z));
     on('vocal', (e) => a.vocal(e.kind, e.intensity, w.identity.voice, k.position.x, k.position.z));
     on('toyImpact', (e) => { a.toyImpact(e.kind, e.speed, e.surface, e.x, e.z); if (e.surface === 'water') this.env.ripple(e.x, e.z, 0.8); });
     on('ripple', (e) => { this.env.ripple(e.x, e.z, e.strength); });
     on('rustle', (e) => a.rustle(e.x, e.z, e.strength));
     on('sound', (e) => {
       if (e.kind === 'whistle') a.whistle('come');
-      else if (e.kind === 'cue') a.whistle('sit');
+      else if (e.kind === 'cue') a.whistle(e.cue ?? 'sit');
       else if (e.kind === 'splash') a.splash(e.x, e.z, e.loud * 2);
       else if (e.kind === 'tap') a.ui('tap');
     });
@@ -204,6 +224,8 @@ export class App {
       if (e.response === 'postpone') this.hint('cue-later', 'It heard you. It will come when it is ready.');
       else if (e.response === 'decline') this.hint('cue-no', 'It heard you — and has other ideas just now.');
       else if (e.response === 'unheard') this.hint('cue-asleep', 'It is fast asleep.');
+      else if (e.kind === 'spin' && e.response === 'correct') this.hint('spin-yes', 'Here comes a twirl. Stroke it as it turns to reward the trick.');
+      else if (e.kind === 'spin') this.hint('spin-try', 'It is still learning the twirl. Try again when it looks up.');
       else if (e.response === 'correct') this.hint('cue-sit', 'It sat! Reward it now — a stroke or a berry — and the cue will stick.');
       else if (e.response === 'offered' || e.response === 'puzzled') this.hint('cue-try', 'It is guessing what the cue means. Reward it only when it sits.');
     });
@@ -226,9 +248,43 @@ export class App {
     if (tool === 'curio') this.hint('curio', 'Click the ground to set down something it has never seen. Click again elsewhere to move it.');
   }
 
+  private watch(subject: Subject): void {
+    if (!this.world || subject === this.wildlifeHud.subject) return;
+    this.unlockAudio();
+    this.hud.closePanels();
+    if (this.wildlifeHud.subject === 'kinling') this.kinlingCamera = { distance: this.cam.distance, polar: this.cam.polar, azimuth: this.cam.azimuth };
+    if (this.wildlifeHud.subject === 'frog') this.world.wildlife.leaveChorus();
+    this.wildlifeHud.select(subject);
+    this.setTool(subject === 'kinling' ? 'hand' : 'watch');
+    if (subject === 'kinling') {
+      Object.assign(this.cam, this.kinlingCamera);
+      this.cam.snap(this.interp);
+    } else {
+      this.cam.distance = subject === 'frog' && this.stage.camera.aspect < .8 ? 4.3 : 2.7;
+      this.cam.azimuth = subject === 'frog' ? 0 : -.38;
+      this.cam.polar = subject === 'frog' ? .98 : 1.28;
+      this.visitorFocus(subject);
+      this.cam.snap(this.watchPoint);
+      this.wildlifeHud.update(this.world.wildlife);
+    }
+  }
+
+  private visitorFocus(subject: 'robin' | 'frog'): void {
+    const p = subject === 'frog' ? PADS[1] : this.world.wildlife.robin.position;
+    this.watchPoint.set(p.x, p.y - (subject === 'frog' ? .15 : 0), p.z + (subject === 'frog' ? .28 : 0));
+  }
+
   private act(tool: Tool, x: number, z: number): void {
     const w = this.world;
     switch (tool) {
+      case 'watch': {
+        const visitors = w.wildlife;
+        if (this.wildlifeHud.subject === 'frog') {
+          const i = PADS.findIndex(p => Math.hypot(x - p.x, z - p.z) < .39);
+          visitors.choosePad(i);
+        } else if (this.wildlifeHud.subject === 'robin') visitors.scatter({ x, z });
+        break;
+      }
       case 'hand':
         // a tap on the ground: a small sound it may look toward
         w.emitSound({ kind: 'tap', x, z, loud: 0.22 });
@@ -251,6 +307,10 @@ export class App {
 
   private call(): void {
     this.world.cue('come');
+  }
+  private cueSpin(): void {
+    this.world.cue('spin');
+    this.hint('spin-how', 'Watch for a full turn, then reward it with a stroke.');
   }
   private cueSit(): void {
     this.world.cue('sit');
@@ -320,10 +380,16 @@ export class App {
       if (e.key === 'Escape') { this.hud.closePanels(); target?.blur?.(); return; }
       const typing = target?.tagName === 'SELECT' || (target?.tagName === 'INPUT' && ['text', 'range'].includes((target as HTMLInputElement).type));
       if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (!this.world) return;
+      if (this.wildlifeHud.subject !== 'kinling' && /^[1-6cspt]$/i.test(e.key)) {
+        if (this.wildlifeHud.subject === 'frog' && /^[1-3]$/.test(e.key)) this.world.wildlife.choosePad(Number(e.key) - 1);
+        return;
+      }
       const tools: Tool[] = ['hand', 'berry', 'ball', 'rattle', 'wisp', 'curio'];
       const n = Number(e.key);
       if (n >= 1 && n <= 6) this.setTool(tools[n - 1]);
       else if (e.key === 'c' || e.key === 'C') { this.unlockAudio(); this.call(); }
+      else if (e.key.toLowerCase() === 't') { this.unlockAudio(); this.cueSpin(); }
       else if (e.key === 's' || e.key === 'S') { this.unlockAudio(); this.cueSit(); }
       else if (e.key === 'm' || e.key === 'M') { this.settings.muted = !this.settings.muted; this.applySettings(); }
       else if (e.key === '`') this.inspector.toggle();
@@ -376,7 +442,14 @@ export class App {
       if (this.keys.has('ArrowDown')) this.cam.orbit(0, -sp);
     }
     this.rig.headWorld(this.head);
-    this.cam.update(dt, this.interp, this.head.y);
+    const subject = this.wildlifeHud.subject;
+    if (subject === 'kinling') this.cam.update(dt, this.interp, this.head.y);
+    else {
+      this.visitorFocus(subject);
+      this.cam.update(dt, this.watchPoint, this.watchPoint.y + .2);
+    }
+    this.visitors.update(w.wildlife, w.time, this.settings.reducedMotion);
+    this.wildlifeHud.update(w.wildlife);
     if ((this.spotTimer -= dt) <= 0) {
       this.spotTimer = 0.4;
       const spot = { x: 0, z: 0 };
@@ -419,7 +492,7 @@ export class App {
     // first meeting: light guidance, and a name once it has shown itself
     if (this.firstSession) {
       if (this.clock > 3) this.hint('look', 'Drag to look around. Scroll or pinch to come closer.');
-      if (this.clock > 14 && !this.namePrompted) {
+      if (this.clock > 14 && this.wildlifeHud.subject === 'kinling' && !this.namePrompted) {
         this.namePrompted = true;
         this.hud.askName(suggestName(w.identity.seed), (name) => {
           if (name) { w.identity.name = name; this.hud.setName(name); this.save(); }

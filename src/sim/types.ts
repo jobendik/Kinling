@@ -6,7 +6,7 @@ export type ActivityId = 'ball' | 'rattle' | 'wisp';
 export const ACTIVITIES: readonly ActivityId[] = ['ball', 'rattle', 'wisp'];
 export type CurioKind = 'hummer' | 'spinner' | 'shell';
 export const CURIO_KINDS: readonly CurioKind[] = ['hummer', 'spinner', 'shell'];
-export type CueKind = 'come' | 'sit';
+export type CueKind = 'come' | 'sit' | 'spin';
 
 export type Posture = 'stand' | 'sit' | 'lie' | 'sleep';
 export type MoveStyle = 'amble' | 'walk' | 'trot' | 'run' | 'sneak' | 'cautious' | 'tired';
@@ -28,10 +28,12 @@ export interface SoundEvent {
   /** 0..1 */
   loud: number;
   sourceId?: string;
+  cue?: CueKind;
 }
 
 /** Events the simulation publishes for presentation (animation accents, audio, UI). */
 export interface SimEvents {
+  wildlifeCall: { species: 'robin' | 'frog'; x: number; z: number };
   vocal: { kind: VocalKind; intensity: number };
   sound: SoundEvent;
   ripple: { x: number; z: number; strength: number };

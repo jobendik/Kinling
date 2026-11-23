@@ -1174,6 +1174,9 @@ export class CueGoal extends Activity {
         new Do(k, 'chirp', { optional: true, onContact: () => k.vocal('chirp', 0.6) }),
         new Wait(k, 6.5, { until: rewardedSince, tick: lookUp }),
       );
+    } else if (this.response === 'correct' && this.cue === 'spin') {
+      this.phase = 'spinning on cue';
+      this.seq(new Face(k, cam, 0.5), mark, new Do(k, 'spin'), new Wait(k, 6, { until: rewardedSince, tick: lookUp }));
     } else if (this.response === 'correct') {
       this.phase = 'sitting on cue';
       this.seq(new Face(k, cam, 0.5), new Settle(k, 'sit'), mark, new Wait(k, 6, { until: rewardedSince, tick: lookUp }));
